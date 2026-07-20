@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Billing</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 420px; margin: 3rem auto; color: #1a1a1a; }
+  h1 { font-size: 1.25rem; }
+  .price { font-size: 2rem; font-weight: 700; margin-top: 1rem; }
+  button { margin-top: 1.5rem; padding: 0.5rem 1.25rem; font-size: 1rem; cursor: pointer; }
+  #message { margin-top: 1rem; font-weight: 600; }
+  #message.success { color: #146c2e; }
+  #message.error { color: #a4262c; }
+</style>
+</head>
+<body>
+  <h1 id="feature-name">Loading…</h1>
+  <div id="content"></div>
+  <div id="message"></div>
+
+  <script>
+    const featureName = document.getElementById('feature-name');
+    const content = document.getElementById('content');
+    const message = document.getElementById('message');
+    const featureId = new URLSearchParams(window.location.search).get('featureId');
+
+    function showError(text) {
+      featureName.textContent = 'Billing';
+      message.textContent = text;
+      message.className = 'error';
+    }
+
+    function renderActive(subscription) {
+      const since = new Date(subscription.activatedAt).toLocaleDateString();
+      content.innerHTML = `<p>Active since ${since}</p>`;
+    }
+
+    function renderInactive(feature) {
+      content.innerHTML = `
+        <div class="price">${feature.price}</div>
+        <button id="activate">Activate</button>
+      `;
+      document.getElementById('activate').addEventListener('click', activate);
+    }
+
+    async function loadState() {
+      const res = await fetch(`/billing/${encodeURIComponent(featureId)}/state`);
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error || 'Failed to load billing state');
+      }
+      const body = await res.json();
+      featureName.textContent = body.feature.displayName;
+      if (body.active) {
+        renderActive(body.subscription);
+      } else {
+        renderInactive(body.feature);
+      }
+    }
+
+    async function activate() {
+      message.textContent = '';
+      message.className = '';
+      try {
+        const res = await fetch(`/billing/${encodeURIComponent(featureId)}/activate`, {
+          method: 'POST',
+        });
+        const body = await res.json();
+        if (!res.ok) {
+          throw new Error(body.error || 'Failed to activate');
+        }
+        renderActive(body);
+      } catch (err) {
+        message.textContent = err.message;
+        message.className = 'error';
+      }
+    }
+
+    if (!featureId) {
+      showError('Missing featureId query parameter.');
+    } else {
+      loadState().catch((err) => showError(err.message));
+    }
+  </script>
+</body>
+</html>
