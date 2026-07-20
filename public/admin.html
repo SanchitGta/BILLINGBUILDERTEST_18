@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin: Feature Config</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 420px; margin: 3rem auto; color: #1a1a1a; }
+  h1 { font-size: 1.25rem; }
+  label { display: block; margin-top: 1rem; font-weight: 600; }
+  input { width: 100%; padding: 0.5rem; margin-top: 0.25rem; box-sizing: border-box; font-size: 1rem; }
+  button { margin-top: 1.5rem; padding: 0.5rem 1.25rem; font-size: 1rem; cursor: pointer; }
+  #message { margin-top: 1rem; font-weight: 600; }
+  #message.success { color: #146c2e; }
+  #message.error { color: #a4262c; }
+</style>
+</head>
+<body>
+  <h1>Feature Config</h1>
+  <form id="feature-form">
+    <label for="featureId">Feature ID (lowercase slug)</label>
+    <input id="featureId" name="featureId" pattern="[a-z0-9-]+" placeholder="dark-mode" required>
+
+    <label for="displayName">Display Name</label>
+    <input id="displayName" name="displayName" placeholder="Dark Mode" required>
+
+    <label for="price">Price</label>
+    <input id="price" name="price" type="number" min="0" step="0.01" placeholder="4.99" required>
+
+    <button type="submit">Save</button>
+  </form>
+  <div id="message"></div>
+
+  <script>
+    const form = document.getElementById('feature-form');
+    const message = document.getElementById('message');
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      message.textContent = '';
+      message.className = '';
+
+      const featureId = document.getElementById('featureId').value.trim();
+      const displayName = document.getElementById('displayName').value.trim();
+      const price = document.getElementById('price').value;
+
+      try {
+        const res = await fetch('/features', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ featureId, displayName, price: Number(price) }),
+        });
+        const body = await res.json();
+        if (!res.ok) {
+          throw new Error(body.error || 'Failed to save feature config');
+        }
+        message.textContent = `Saved: "${body.displayName}" (${body.featureId}) at ${body.price}`;
+        message.className = 'success';
+      } catch (err) {
+        message.textContent = err.message;
+        message.className = 'error';
+      }
+    });
+  </script>
+</body>
+</html>
